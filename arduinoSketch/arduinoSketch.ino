@@ -1,4 +1,6 @@
+#include <Wire.h>
 #include <DHT.h>
+#include <LiquidCrystal_I2C.h>
 // ports
 #define SOILHUMIDITYSENSORPIN A7
 #define LIGHTSENSORPIN A0
@@ -7,8 +9,43 @@
 
 String readString;
 boolean pumpRelay = false;
+int textLCDIndex;
 
 DHT dht(DHTSENSORPIN, DHT22);
+LiquidCrystal_I2C lcd(0x27,16,2);
+
+byte happyFace[8]={
+B00000,
+B11011,
+B11011,
+B00000,
+B10001,
+B01110,
+B01110,
+B00000
+};
+
+byte sadFace[8]={
+B00000,
+B11011,
+B11011,
+B00000,
+B01110,
+B01110,
+B10001,
+B00000
+};
+
+byte acento[8]={
+B00010,
+B00100,
+B01110,
+B00001,
+B01111,
+B10001,
+B01111,
+B00000
+};
 
 void setup() {
   // USB Serial
@@ -21,8 +58,21 @@ void setup() {
   // DHT
   dht.begin();
 
+  // LCD
+  lcd.init();
+  lcd.createChar(5, happyFace);
+  lcd.createChar(6, sadFace);
+  lcd.createChar(1, acento);
+  lcd.setBacklight(HIGH);
+  lcd.setCursor(0,0);
+  lcd.print("    Horta");
+  lcd.setCursor(0,1);
+  lcd.print(" carregando...");
+
   pinMode(LIGHTSENSORPIN, INPUT);
   pinMode(RELAYPIN, OUTPUT);
+
+  delay(500);
 }
 
 void loop() {
@@ -54,9 +104,30 @@ void loop() {
   if (soilHumidity > 700) {
     digitalWrite(RELAYPIN, HIGH);
     pumpRelay = true;
+    if (textLCDIndex != 1) {
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Humidade baixa!");
+      lcd.write(6);
+      lcd.setCursor(0,1);
+      lcd.print("Regando...");
+      textLCDIndex = 1;
+    }
+    
   } else {
     digitalWrite(RELAYPIN, LOW);
     pumpRelay = false;
+    if (textLCDIndex != 2) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Planta saud");
+    lcd.write(1);
+    lcd.print("vel");
+    lcd.write(5);
+    lcd.setCursor(0,1);
+    lcd.print("Estado ideal");
+    textLCDIndex = 2;
+    }
   }
 
   if (readString.length() > 0) {
